@@ -36,6 +36,14 @@ public class NoteController {
             noteService.getAllNotes(model);
             return "redirect:/";
         }
+
+        if (upload != null && upload.equals("Upload")) {
+            if (file != null && file.getOriginalFilename() != null && !file.getOriginalFilename().isEmpty()) {
+                noteService.uploadImage(file, description, model);
+            }
+            noteService.getAllNotes(model);
+            return "index";
+        }
         // After save fetch all notes again
         return "index";
     }
