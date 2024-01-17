@@ -7,14 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.Files;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -23,10 +17,13 @@ import java.util.UUID;
 public class NoteService {
 
     @Autowired
+    NoteConfig noteConfig;
+
+    @Autowired
     private NotesRepository notesRepository;
 
     @Autowired
-    private NoteProperties noteProperties;
+    private NoteProperties properties;
 
     private Parser parser = Parser.builder().build();
     private HtmlRenderer renderer = HtmlRenderer.builder().build();
@@ -49,20 +46,15 @@ public class NoteService {
         }
     }
 
-    public void uploadImage(MultipartFile file, String description, Model model) throws IOException {
-        File uploadsDir = new File(noteProperties.getUploadDir());
-        if (!uploadsDir.exists()) {
-            boolean result = uploadsDir.mkdirs();
-            System.out.println(result);
-        }
-        String fileId = UUID.randomUUID().toString() + "." +
-                file.getOriginalFilename().split("\\.")[1];
-        String destinationFile = noteProperties.getUploadDir() + fileId;
-        try (InputStream inputStream = file.getInputStream()) {
-            Files.copy(inputStream, Paths.get(destinationFile),
-                    StandardCopyOption.REPLACE_EXISTING);
-        }
+    public void uploadImage(MultipartFile file, String description, Model model) throws Exception {
+        String fileId = UUID.randomUUID().toString() + "." + file.getOriginalFilename().split("\\.")[1];
+        noteConfig.getMinioClient().putObject(properties.getMinioBucket(), fileId, file.getInputStream(),
+                file.getSize(), null, null, file.getContentType());
         model.addAttribute("description",
-                description + " ![](/uploads/" + fileId + ")");
+                description + " ![](/img/" + fileId + ")");
+    }
+
+    public InputStream getImageByName(String name) throws Exception {
+        return noteConfig.getMinioClient().getObject(properties.getMinioBucket(), name);
     }
 }
